@@ -7,6 +7,7 @@ Adresse du site : **https://farahboudaoud-sketch.github.io/declic/**
 ## Ce que fait le site
 
 - **Import** : un PDF (lu directement dans le navigateur, il n'est envoyé nulle part), un lien vers une page web ou un PDF en ligne, ou un texte collé.
+- **Bouton « Envoyer vers Déclic »** : un favori à glisser dans la barre du navigateur. Sur la page d'un cours où l'on est connecté (plateforme de formation, ENT…) ou qui s'affiche en JavaScript, un clic envoie le texte affiché vers Déclic. Le texte passe dans l'adresse après le `#` : il n'est envoyé à aucun serveur. Si du texte est sélectionné, seule la sélection est envoyée.
 - **Onglet Adaptation** : le texte original aéré, une phrase par ligne. Chaque mot est cliquable et ouvre une bulle avec :
   - le découpage en syllabes et la lecture à voix haute du mot ou de la phrase ;
   - des synonymes adaptés à la phrase et le sens du mot ici (aide par IA) ;

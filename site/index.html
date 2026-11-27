@@ -53,6 +53,19 @@
         <button type="button" class="btn btn-principal" id="btn-coller">Lire ce texte</button>
       </details>
 
+      <section class="favori-bloc" aria-labelledby="titre-favori">
+        <h2 id="titre-favori">Un cours sur un site où tu es connecté ?</h2>
+        <p>Glisse ce bouton dans ta barre de favoris :</p>
+        <a class="favori" id="lien-favori" href="#" draggable="true">
+          <svg class="ico" aria-hidden="true"><use href="img/icones.svg#bulb"></use></svg>Envoyer vers Déclic
+        </a>
+        <ol>
+          <li>Ouvre ton cours comme d'habitude, en étant connecté.</li>
+          <li>Clique sur le favori « Envoyer vers Déclic » : le cours s'ouvre ici, aéré.</li>
+        </ol>
+        <p class="astuce">Tu ne vois pas la barre de favoris ? Ctrl + Maj + B (Cmd + Maj + B sur Mac). Pour n'envoyer qu'une partie du cours, sélectionne-la avant de cliquer. Fonctionne sur ordinateur.</p>
+      </section>
+
       <p id="message-accueil" class="message" role="status" aria-live="polite"></p>
 
       <section class="recents" id="recents" hidden>

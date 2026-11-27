@@ -2,6 +2,7 @@ import { decouperPhrases, decouperMots, paragraphesDepuisTexte, empreinte } from
 import { syllabes } from './syllabes.js';
 import * as stockage from './stockage.js';
 import * as ia from './ia.js';
+import { lienFavori, lireTexteRecu } from './favori.js';
 
 const $ = (s, racine = document) => racine.querySelector(s);
 const $$ = (s, racine = document) => [...racine.querySelectorAll(s)];
@@ -132,8 +133,10 @@ async function ouvrirLien(url) {
       await ouvrirPdf(res.pdf, nom);
       return;
     }
-    if (!res.paragraphes?.length) {
-      messageAccueil('Je n’ai pas trouvé de texte à lire sur cette page.', true);
+    const total = (res.paragraphes || []).reduce((s, p) => s + p.texte.length, 0);
+    const pageConnexion = total < 2000 && /connexion|se connecter|identifiant|mot de passe|log ?in|sign ?in|password/i.test((res.paragraphes || []).map((p) => p.texte).join(' '));
+    if (!res.paragraphes?.length || total < 80 || pageConnexion) {
+      messageAccueil('Cette page demande sans doute une connexion, ou affiche son texte autrement. Ouvre-la dans ton navigateur et utilise le bouton « Envoyer vers Déclic » (juste en dessous).', true);
       return;
     }
     ouvrirDocument(creerDocument(res.titre, res.paragraphes));
@@ -710,6 +713,12 @@ function initEvenements() {
     }
   });
   $('#btn-code').addEventListener('click', demanderCode);
+  const favori = $('#lien-favori');
+  favori.href = lienFavori(location.origin + location.pathname);
+  favori.addEventListener('click', (e) => {
+    e.preventDefault();
+    messageAccueil('Ne clique pas dessus ici : glisse ce bouton dans ta barre de favoris, puis utilise-le sur la page de ton cours.');
+  });
 
   // Onglets (clic et flèches du clavier)
   $('#onglet-adaptation').addEventListener('click', () => choisirOnglet('adaptation'));
@@ -781,7 +790,17 @@ initReglages();
 initVolet();
 initEvenements();
 synthese?.addEventListener?.('voiceschanged', () => {});
-if (location.hash === '#lire') {
+const recu = lireTexteRecu(location.hash);
+if (recu) {
+  history.replaceState({}, '', location.pathname);
+  const paragraphes = recu.blocs.length ? recu.blocs : paragraphesDepuisTexte(recu.texte);
+  const titre = recu.titre.replace(/\s+[|–—-]\s+[^|–—-]{1,30}$/u, '').trim();
+  if (paragraphes.length) ouvrirDocument(creerDocument(titre, paragraphes));
+  else {
+    afficherAccueil();
+    messageAccueil('Déclic n’a rien reçu à lire. Sélectionne le texte du cours, puis reclique sur le favori.', true);
+  }
+} else if (location.hash === '#lire') {
   const dernier = stockage.listeDocs()[0];
   const d = dernier && stockage.chargerDoc(dernier.id);
   if (d) {

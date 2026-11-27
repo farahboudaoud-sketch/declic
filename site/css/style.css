@@ -139,6 +139,17 @@ body.en-lecture[data-fond="sombre"] .onglets button[aria-selected="false"] { col
 .coller summary { cursor: pointer; font-weight: 700; color: var(--bleu-800); display: flex; align-items: center; gap: 8px; }
 .coller[open] summary { margin-bottom: 10px; }
 .coller textarea { resize: vertical; margin-bottom: 10px; line-height: 1.6; }
+.favori-bloc { margin-top: 14px; background: #fff; border: 1px solid var(--bleu-100); border-radius: 12px; padding: 14px 18px; }
+.favori-bloc h2 { font-size: 17px; margin: 0 0 4px; color: var(--bleu-800); }
+.favori-bloc p, .favori-bloc ol { margin: 6px 0; }
+.favori-bloc ol { padding-left: 1.3em; }
+.favori {
+  display: inline-flex; align-items: center; gap: 8px; margin: 4px 0 6px;
+  background: var(--ambre-50); color: var(--ambre-800); border: 2px dashed var(--ambre-200);
+  border-radius: 10px; padding: 8px 14px; font-weight: 700; text-decoration: none; cursor: grab;
+}
+.favori .ico { color: var(--ambre-400); }
+.favori-bloc .astuce { font-size: 15px; color: var(--bleu-600); }
 .message { min-height: 1.5em; margin: 16px 0 0; text-align: center; color: var(--bleu-600); }
 .message.erreur { color: var(--rouge); }
 .recents h2 { font-size: 16px; color: var(--bleu-600); font-weight: 400; margin: 26px 0 8px; }
