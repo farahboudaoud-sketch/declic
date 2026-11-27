@@ -58,6 +58,9 @@ jobs:
             appel /phrase '{"phrase":"La photosynthèse est le processus par lequel les plantes vertes fabriquent leur propre nourriture à partir de la lumière, de l eau et du dioxyde de carbone."}'
             echo "== Reformulation d'un paragraphe =="
             appel /paragraphe '{"titre":"La photosynthèse","texte":"La photosynthèse est le processus par lequel les plantes vertes fabriquent leur propre nourriture. Elle a lieu principalement dans les feuilles, grâce à un pigment vert appelé chlorophylle. Pour cela, la plante utilise l énergie lumineuse du soleil."}'
+            echo "== Récupération d'une page web (titre et 3 premiers blocs) =="
+            curl -sS -X POST "$URL/lien" -H "Content-Type: application/json" -H "X-Code-Acces: $CODE" -H "Origin: $ORIGINE" \
+              -d '{"url":"https://fr.wikipedia.org/wiki/Photosynth%C3%A8se"}' | jq -c '{titre, nb_blocs: (.paragraphes | length), debut: .paragraphes[:3]}'
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
           echo "== En-têtes CORS =="
