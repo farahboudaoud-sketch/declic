@@ -156,6 +156,21 @@
         </button>
       </aside>
 
+      <div class="lecteur" id="lecteur" role="toolbar" aria-label="Lecture à voix haute" data-etat="arret">
+        <button type="button" class="lecteur-btn" id="lect-prec" aria-label="Phrase précédente" hidden>
+          <svg class="ico" aria-hidden="true"><use href="img/icones.svg#player-track-prev"></use></svg>
+        </button>
+        <button type="button" class="lecteur-principal" id="lect-lire" aria-label="Lire à voix haute">
+          <svg class="ico" aria-hidden="true"><use href="img/icones.svg#player-play"></use></svg><span>Écouter</span>
+        </button>
+        <button type="button" class="lecteur-btn" id="lect-suiv" aria-label="Phrase suivante" hidden>
+          <svg class="ico" aria-hidden="true"><use href="img/icones.svg#player-track-next"></use></svg>
+        </button>
+        <button type="button" class="lecteur-btn" id="lect-stop" aria-label="Arrêter la lecture" hidden>
+          <svg class="ico" aria-hidden="true"><use href="img/icones.svg#player-stop"></use></svg>
+        </button>
+      </div>
+
       <div class="feuille" id="panneau-adaptation" role="tabpanel" aria-labelledby="onglet-adaptation"></div>
       <div class="feuille" id="panneau-reformulation" role="tabpanel" aria-labelledby="onglet-reformulation" hidden></div>
     </section>

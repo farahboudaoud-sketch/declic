@@ -266,6 +266,28 @@ body[data-fond="sombre"] .erreur-bloc { color: #F09595; }
 .interrupteur:checked::after { left: 21px; }
 .boutons-lecture { display: flex; gap: 6px; }
 
+/* ---------- Barre de lecture à voix haute ---------- */
+.lecteur {
+  position: fixed; z-index: 22; right: 20px; bottom: 20px;
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bleu-800); color: #fff; border-radius: 999px; padding: 5px;
+  box-shadow: 0 8px 24px rgba(4, 44, 83, 0.25);
+}
+.lecteur-principal {
+  display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer;
+  background: var(--ambre-100); color: var(--ambre-900); font-weight: 700; font-size: 16px;
+  border-radius: 999px; padding: 9px 18px 9px 14px; min-width: 132px; justify-content: center;
+}
+.lecteur-principal:hover { background: #F7BC5A; }
+.lecteur[data-etat="pause"] .lecteur-principal { background: #fff; color: var(--bleu-900); }
+.lecteur-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 50%; border: 0; cursor: pointer;
+  background: transparent; color: #fff;
+}
+.lecteur-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.lecteur .ico { width: 22px; height: 22px; }
+
 /* ---------- Bulle d'aide sur un mot ---------- */
 .bulle {
   position: absolute; z-index: 30;
@@ -317,6 +339,7 @@ body[data-fond="sombre"] .erreur-bloc { color: #F09595; }
   .lecture { padding: 14px 10px 100px 72px; }
   .feuille { padding: 1.1em 1.1em; }
   .volet { left: 8px; }
+  .lecteur { right: 50%; transform: translateX(50%); bottom: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }

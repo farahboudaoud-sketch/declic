@@ -367,6 +367,7 @@ function ouvrirBulle(motEl) {
     <div class="bulle-actions">
       <button type="button" class="puce-btn" data-action="ecouter-mot">${icone('volume')}Écouter</button>
       <button type="button" class="puce-btn" data-action="ecouter-phrase">${icone('volume')}La phrase</button>
+      <button type="button" class="puce-btn" data-action="lire-ici">${icone('player-play')}Lire à partir d’ici</button>
     </div>
     <div class="bulle-section" id="bulle-ia"></div>`;
   bulle.hidden = false;
@@ -457,6 +458,12 @@ bulle.addEventListener('click', async (e) => {
   else if (action === 'ecouter-phrase') dire(bulle.dataset.phrase);
   else if (action === 'ecouter-reform') dire($('#bulle-reform', bulle)?.dataset.texte || '');
   else if (action === 'reformuler') reformulerPhraseBulle();
+  else if (action === 'lire-ici') {
+    const phraseEl = motActif?.closest('.phrase');
+    const index = $$('.phrase', panneauActif()).indexOf(phraseEl);
+    fermerBulle();
+    demarrerLecture(Math.max(0, index));
+  }
   else if (action === 'code') {
     const mot = bulle.dataset.mot;
     const phrase = bulle.dataset.phrase;
@@ -473,7 +480,9 @@ bulle.addEventListener('click', async (e) => {
 // ======================================================================
 
 const synthese = 'speechSynthesis' in window ? window.speechSynthesis : null;
-let lecture = { active: false, enPause: false, phrases: [], index: 0, jeton: 0 };
+// etat : 'arret', 'lecture' ou 'pause'. La pause est gérée par Déclic (et non par la fonction pause
+// du navigateur, peu fiable) : on coupe la voix et, à la reprise, on relit la phrase en cours.
+const lecture = { etat: 'arret', phrases: [], index: 0, jeton: 0 };
 
 function voixFrancaise() {
   const voix = synthese?.getVoices() || [];
@@ -491,58 +500,138 @@ function enonce(texte) {
   return u;
 }
 
+// Certains navigateurs coupent les énoncés trop longs : on découpe les longues phrases aux virgules.
+function morceauxAParler(texte) {
+  const t = texte.replace(/\s+/g, ' ').trim();
+  if (t.length <= 180) return [t];
+  const res = [];
+  let courant = '';
+  for (const bout of t.split(/(?<=[,;:])\s+/)) {
+    if (courant && (courant + ' ' + bout).length > 180) { res.push(courant); courant = bout; } else courant = courant ? `${courant} ${bout}` : bout;
+  }
+  if (courant) res.push(courant);
+  return res;
+}
+
 function dire(texte) {
   if (!synthese || !texte) return;
   arreterLecture();
-  synthese.speak(enonce(texte));
+  for (const m of morceauxAParler(texte)) synthese.speak(enonce(m));
 }
 
-function majBoutonLecture() {
-  const enLecture = lecture.active && !lecture.enPause;
-  $('#btn-lire').innerHTML = icone(enLecture ? 'player-pause' : 'player-play');
-  $('#btn-lire').setAttribute('aria-label', enLecture ? 'Mettre en pause' : 'Lire à voix haute');
-}
-
-function lirePhraseSuivante(jeton) {
-  if (jeton !== lecture.jeton) return;
+function marquerPhraseLue() {
   $$('.phrase.lue').forEach((el) => el.classList.remove('lue'));
-  if (lecture.index >= lecture.phrases.length) { arreterLecture(); return; }
   const el = lecture.phrases[lecture.index];
+  if (!el) return;
   el.classList.add('lue');
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  const u = enonce(el.textContent);
-  u.onend = () => { lecture.index += 1; lirePhraseSuivante(jeton); };
-  u.onerror = (ev) => { if (ev.error !== 'interrupted' && ev.error !== 'canceled') { lecture.index += 1; lirePhraseSuivante(jeton); } };
-  synthese.speak(u);
 }
 
-function basculerLecture() {
+function lirePhrase(jeton) {
+  if (jeton !== lecture.jeton) return;
+  if (lecture.index >= lecture.phrases.length) { arreterLecture(); return; }
+  marquerPhraseLue();
+  const morceaux = morceauxAParler(lecture.phrases[lecture.index].textContent);
+  let k = 0;
+  const suivant = () => {
+    if (jeton !== lecture.jeton) return;
+    if (k >= morceaux.length) {
+      lecture.index += 1;
+      lirePhrase(jeton);
+      return;
+    }
+    const u = enonce(morceaux[k++]);
+    u.onend = suivant;
+    u.onerror = (ev) => {
+      if (jeton !== lecture.jeton || ev.error === 'interrupted' || ev.error === 'canceled') return;
+      suivant();
+    };
+    synthese.speak(u);
+  };
+  suivant();
+}
+
+// Coupe la voix puis relance la lecture à lecture.index (petit délai : certains navigateurs ignorent
+// un énoncé lancé juste après une coupure).
+function relancer() {
+  lecture.jeton += 1;
+  const jeton = lecture.jeton;
+  synthese.cancel();
+  setTimeout(() => lirePhrase(jeton), 80);
+}
+
+// Première phrase visible à l'écran : la lecture part de ce que l'élève voit.
+function indexDepart(phrases) {
+  const haut = document.querySelector('.entete').getBoundingClientRect().bottom + 8;
+  const i = phrases.findIndex((p) => {
+    const r = p.getBoundingClientRect();
+    return r.bottom > haut && r.top < window.innerHeight;
+  });
+  return Math.max(0, i);
+}
+
+function demarrerLecture(index) {
   if (!synthese) {
     alert('Ton navigateur ne sait pas lire à voix haute.');
     return;
   }
-  if (lecture.active) {
-    if (lecture.enPause) synthese.resume(); else synthese.pause();
-    lecture.enPause = !lecture.enPause;
-    majBoutonLecture();
-    return;
-  }
   const phrases = $$('.phrase', panneauActif());
   if (!phrases.length) return;
-  const active = phrases.findIndex((p) => p.classList.contains('active'));
+  lecture.phrases = phrases;
+  lecture.index = Math.min(Math.max(0, index ?? indexDepart(phrases)), phrases.length - 1);
+  lecture.etat = 'lecture';
+  majLecteur();
+  relancer();
+}
+
+function mettreEnPause() {
+  if (lecture.etat !== 'lecture') return;
+  lecture.etat = 'pause';
+  lecture.jeton += 1;
   synthese.cancel();
-  lecture = { active: true, enPause: false, phrases, index: Math.max(0, active), jeton: lecture.jeton + 1 };
-  majBoutonLecture();
-  lirePhraseSuivante(lecture.jeton);
+  majLecteur();
+}
+
+function reprendreLecture() {
+  if (lecture.etat !== 'pause') return;
+  lecture.etat = 'lecture';
+  majLecteur();
+  relancer();
+}
+
+function basculerLecture() {
+  if (lecture.etat === 'lecture') mettreEnPause();
+  else if (lecture.etat === 'pause') reprendreLecture();
+  else demarrerLecture();
+}
+
+function changerPhrase(decalage) {
+  if (lecture.etat === 'arret') return;
+  lecture.index = Math.min(Math.max(0, lecture.index + decalage), lecture.phrases.length - 1);
+  if (lecture.etat === 'lecture') relancer();
+  else marquerPhraseLue();
 }
 
 function arreterLecture() {
   lecture.jeton += 1;
-  lecture.active = false;
-  lecture.enPause = false;
+  lecture.etat = 'arret';
   synthese?.cancel();
   $$('.phrase.lue').forEach((el) => el.classList.remove('lue'));
-  majBoutonLecture();
+  majLecteur();
+}
+
+// Met à jour la barre de lecture flottante et le bouton du volet.
+function majLecteur() {
+  const { etat } = lecture;
+  const principal = $('#lect-lire');
+  const libelle = etat === 'lecture' ? 'Pause' : etat === 'pause' ? 'Reprendre' : 'Écouter';
+  principal.innerHTML = `${icone(etat === 'lecture' ? 'player-pause' : 'player-play')}<span>${libelle}</span>`;
+  principal.setAttribute('aria-label', etat === 'lecture' ? 'Mettre en pause' : etat === 'pause' ? 'Reprendre la lecture' : 'Lire à voix haute');
+  for (const id of ['#lect-prec', '#lect-suiv', '#lect-stop']) $(id).hidden = etat === 'arret';
+  $('#lecteur').classList.toggle('actif', etat !== 'arret');
+  $('#lecteur').dataset.etat = etat;
+  $('#btn-lire').innerHTML = icone(etat === 'lecture' ? 'player-pause' : 'player-play');
+  $('#btn-lire').setAttribute('aria-label', principal.getAttribute('aria-label'));
 }
 
 // ======================================================================
@@ -638,6 +727,10 @@ function initVolet() {
   });
   $('#btn-lire').addEventListener('click', basculerLecture);
   $('#btn-stop').addEventListener('click', arreterLecture);
+  $('#lect-lire').addEventListener('click', basculerLecture);
+  $('#lect-prec').addEventListener('click', () => changerPhrase(-1));
+  $('#lect-suiv').addEventListener('click', () => changerPhrase(1));
+  $('#lect-stop').addEventListener('click', arreterLecture);
   majEpingle();
 }
 
@@ -778,7 +871,7 @@ function initEvenements() {
     });
     // Ligne de lecture : suit la souris.
     panneau.addEventListener('pointerover', (e) => {
-      if (!reglages.ligne || lecture.active) return;
+      if (!reglages.ligne || lecture.etat !== 'arret') return;
       const ph = e.target.closest('.phrase');
       if (!ph || ph.classList.contains('active')) return;
       $$('.phrase.active').forEach((el) => el.classList.remove('active'));
@@ -789,6 +882,12 @@ function initEvenements() {
   // Clavier : flèches haut/bas pour déplacer la ligne de lecture, Échap pour fermer la bulle.
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !bulle.hidden) { fermerBulle(); return; }
+    // Pendant la lecture : Espace = pause / reprise, flèches gauche et droite = phrase précédente / suivante.
+    if (lecture.etat !== 'arret' && !e.target.closest('input, select, textarea, button, [role="tab"], dialog')) {
+      if (e.key === ' ') { e.preventDefault(); basculerLecture(); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); changerPhrase(-1); return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); changerPhrase(1); return; }
+    }
     if (!doc || !reglages.ligne || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
     if (e.target.closest('input, select, textarea, [role="tab"]')) return;
     const phrases = $$('.phrase', panneauActif());

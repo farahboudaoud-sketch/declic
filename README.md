@@ -14,6 +14,7 @@ Adresse du site : **https://farahboudaoud-sketch.github.io/declic/**
   - un bouton pour reformuler la phrase plus simplement (aide par IA).
 - **Onglet Reformulation** : le texte entier reformulé paragraphe par paragraphe, avec les termes clés du cours gardés en gras, et un lien « Voir l'original » qui renvoie au même endroit dans l'onglet Adaptation. Les paragraphes ne sont reformulés qu'au moment où on les fait défiler, puis gardés en mémoire.
 - **Réglages** (barre d'icônes à gauche, qui s'ouvre au survol, au toucher, et peut être épinglée) : police (Atkinson Hyperlegible, Lexend, Andika, Verdana), taille, interligne, espacement des mots et des lettres, couleur de fond (crème, bleu, vert, sombre), syllabes en couleur, ligne de lecture (suit la souris ou les flèches ↑ ↓), lecture à voix haute du texte avec la vitesse réglable.
+- **Lecture à voix haute** : une barre flottante en bas de l'écran (« Écouter ») lit le texte phrase par phrase en surlignant la phrase lue, à partir de ce qui est affiché à l'écran. Pendant la lecture : pause et reprise (la phrase en cours est relue depuis son début), phrase précédente ou suivante, arrêt. Raccourcis : Espace pour pause et reprise, flèches ← → pour changer de phrase. Dans la bulle d'un mot, « Lire à partir d'ici » lance la lecture depuis cette phrase.
 - **Confidentialité** : les documents et les réglages restent dans le navigateur de l'élève. Seuls le mot, la phrase ou le paragraphe pour lesquels on demande de l'aide sont envoyés au serveur d'aide.
 
 ## Organisation du dépôt
