@@ -355,21 +355,22 @@ function ouvrirBulle(motEl) {
   const phrase = phraseEl?.textContent.trim() || mot;
   const sylls = syllabes(mot);
   const jeton = jetonBulle;
+  const sylHtml = sylls.map((s, k) => `<span class="bs${k % 2}">${echapper(s)}</span>`).join('<span class="bulle-point"> · </span>');
 
   bulle.innerHTML = `
     <div class="bulle-tete">
-      <div>
-        <div class="bulle-mot">${echapper(mot)}</div>
-        ${sylls.length > 1 ? `<div class="bulle-syl">${sylls.map(echapper).join(' · ')}</div>` : ''}
-      </div>
-      <button type="button" class="icone-btn" data-action="fermer" aria-label="Fermer">${icone('x')}</button>
+      <div class="bulle-titre"><div class="bulle-mot">${echapper(mot)}</div></div>
+      <button type="button" class="bulle-ecouter" data-action="ecouter-mot" aria-label="Écouter le mot">${icone('volume')}</button>
+      <button type="button" class="icone-btn bulle-fermer" data-action="fermer" aria-label="Fermer">${icone('x')}</button>
     </div>
-    <div class="bulle-actions">
-      <button type="button" class="puce-btn" data-action="ecouter-mot">${icone('volume')}Écouter</button>
-      <button type="button" class="puce-btn" data-action="ecouter-phrase">${icone('volume')}La phrase</button>
-      <button type="button" class="puce-btn" data-action="lire-ici">${icone('player-play')}Lire à partir d’ici</button>
-    </div>
-    <div class="bulle-section" id="bulle-ia"></div>`;
+    ${sylls.length > 1 ? `<div class="bulle-syl">${sylHtml}</div>` : ''}
+    <div id="bulle-ia"></div>
+    <div id="bulle-reform"></div>
+    <div class="bulle-section bulle-actions">
+      ${ia.iaDisponible() ? `<button type="button" class="puce-btn" data-action="reformuler">${icone('refresh')}Dire plus simplement</button>` : ''}
+      <button type="button" class="puce-btn" data-action="ecouter-phrase">${icone('volume')}Écouter la phrase</button>
+      <button type="button" class="puce-btn" data-action="lire-ici">${icone('player-play')}Lire d’ici</button>
+    </div>`;
   bulle.hidden = false;
   bulle.dataset.mot = mot;
   bulle.dataset.phrase = phrase;
@@ -378,22 +379,23 @@ function ouvrirBulle(motEl) {
 }
 
 const cacheMots = new Map();
+const etiquette = (nomIcone, texte) => `<div class="bulle-etiquette">${icone(nomIcone)}${texte}</div>`;
+const attente = '<div class="bulle-attente" aria-label="Chargement"><span></span></div>';
 
 async function remplirAideIa(mot, phrase, jeton) {
   const zone = $('#bulle-ia', bulle);
   if (!ia.iaDisponible()) {
-    zone.innerHTML = '<p class="bulle-note">Les synonymes et la reformulation arrivent bientôt.</p>';
+    zone.innerHTML = '<div class="bulle-section"><p class="bulle-note">Le sens du mot et les autres mots arrivent bientôt.</p></div>';
     return;
   }
   if (!stockage.code()) {
-    zone.innerHTML = `<p class="bulle-note">Pour voir les synonymes et reformuler la phrase, entre le code d’accès.</p>
-      <button type="button" class="puce-btn" data-action="code">${icone('key')}Entrer le code</button>`;
+    zone.innerHTML = `<div class="bulle-section"><p class="bulle-note">Pour voir ce que veut dire le mot, entre le code d’accès.</p>
+      <button type="button" class="puce-btn" data-action="code">${icone('key')}Entrer le code</button></div>`;
     placerBulle();
     return;
   }
-  zone.innerHTML = `<p class="bulle-note">${icone('loader-2', 'tourne')} Recherche du sens…</p>
-    <div class="bulle-actions"><button type="button" class="puce-btn" data-action="reformuler">${icone('refresh')}Reformuler la phrase</button></div>
-    <div id="bulle-reform"></div>`;
+  zone.innerHTML = `<div class="bulle-section">${etiquette('bulb', 'Ça veut dire')}${attente}</div>
+    <div class="bulle-section">${etiquette('arrows-exchange', 'Autres mots')}${attente}</div>`;
   placerBulle();
   const cle = `${mot.toLowerCase()}|${phrase}`;
   try {
@@ -404,10 +406,11 @@ async function remplirAideIa(mot, phrase, jeton) {
     }
     if (jeton !== jetonBulle) return;
     const syn = (res.synonymes || []).filter(Boolean);
-    const note = zone.querySelector('.bulle-note');
-    note.outerHTML = `
-      <p><span class="bulle-etiquette">Synonymes :</span> ${syn.length ? syn.map(echapper).join(', ') : '<span class="bulle-note">pas de synonyme simple pour ce mot</span>'}</p>
-      ${res.sens ? `<p><span class="bulle-etiquette">Sens ici :</span> ${echapper(res.sens)}</p>` : ''}`;
+    zone.innerHTML = `
+      ${res.sens ? `<div class="bulle-section">${etiquette('bulb', 'Ça veut dire')}<div class="bulle-texte">${echapper(res.sens)}</div></div>` : ''}
+      ${syn.length ? `<div class="bulle-section">${etiquette('arrows-exchange', 'Autres mots')}
+        ${syn.map((s) => `<button type="button" class="bulle-chip" data-action="dire" data-texte="${echapper(s)}" aria-label="Écouter « ${echapper(s)} »">${echapper(s)}</button>`).join('')}
+      </div>` : ''}`;
   } catch (e) {
     if (jeton !== jetonBulle) return;
     if (e instanceof ia.ErreurCode) {
@@ -415,8 +418,7 @@ async function remplirAideIa(mot, phrase, jeton) {
       remplirAideIa(mot, phrase, jeton);
       return;
     }
-    const note = zone.querySelector('.bulle-note');
-    if (note) note.innerHTML = `${icone('alert-circle')} ${echapper(e.message)}`;
+    zone.innerHTML = `<div class="bulle-section"><p class="bulle-note">${icone('alert-circle')} ${echapper(e.message)}</p></div>`;
   }
   placerBulle();
 }
@@ -425,26 +427,32 @@ async function reformulerPhraseBulle() {
   const zone = $('#bulle-reform', bulle);
   if (!zone) return;
   const jeton = jetonBulle;
+  if (!stockage.code()) {
+    if (!(await demanderCode()) || jeton !== jetonBulle) return;
+    remplirAideIa(bulle.dataset.mot, bulle.dataset.phrase, jeton);
+  }
   const phrase = bulle.dataset.phrase;
   const para = motActif?.closest('[data-p]');
   const contexte = para ? doc.paragraphes[Number(para.dataset.p)]?.texte : '';
-  zone.innerHTML = `<p class="bulle-note">${icone('loader-2', 'tourne')} Reformulation…</p>`;
+  zone.innerHTML = `<div class="bulle-section">${etiquette('refresh', 'Plus simplement')}${attente}</div>`;
   placerBulle();
   try {
     const res = await ia.reformulerPhrase(phrase, contexte);
     if (jeton !== jetonBulle) return;
     const texte = (res.reformulation || '').replace(/\*\*/g, '');
-    zone.innerHTML = `<div class="bulle-reform">${echapper(texte)}</div>
-      <div class="bulle-actions"><button type="button" class="puce-btn" data-action="ecouter-reform">${icone('volume')}Écouter</button></div>`;
     zone.dataset.texte = texte;
+    zone.innerHTML = `<div class="bulle-section bulle-reform">${etiquette('refresh', 'Plus simplement')}
+      <div class="bulle-texte">${echapper(texte)}</div>
+      <button type="button" class="puce-btn" data-action="ecouter-reform">${icone('volume')}Écouter</button></div>`;
   } catch (e) {
     if (jeton !== jetonBulle) return;
     if (e instanceof ia.ErreurCode) {
       stockage.definirCode('');
+      zone.innerHTML = '';
       remplirAideIa(bulle.dataset.mot, phrase, jeton);
       return;
     }
-    zone.innerHTML = `<p class="bulle-note">${icone('alert-circle')} ${echapper(e.message)}</p>`;
+    zone.innerHTML = `<div class="bulle-section"><p class="bulle-note">${icone('alert-circle')} ${echapper(e.message)}</p></div>`;
   }
   placerBulle();
 }
@@ -457,6 +465,7 @@ bulle.addEventListener('click', async (e) => {
   else if (action === 'ecouter-mot') dire(bulle.dataset.mot);
   else if (action === 'ecouter-phrase') dire(bulle.dataset.phrase);
   else if (action === 'ecouter-reform') dire($('#bulle-reform', bulle)?.dataset.texte || '');
+  else if (action === 'dire') dire(b.dataset.texte);
   else if (action === 'reformuler') reformulerPhraseBulle();
   else if (action === 'lire-ici') {
     const phraseEl = motActif?.closest('.phrase');

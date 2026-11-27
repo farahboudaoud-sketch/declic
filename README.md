@@ -8,10 +8,11 @@ Adresse du site : **https://farahboudaoud-sketch.github.io/declic/**
 
 - **Import** : un PDF ou un fichier Markdown (`.md`, ou `.txt`), lus directement dans le navigateur et envoyés nulle part ; un lien vers une page web, un PDF ou un fichier Markdown en ligne ; ou un texte collé. Dans les fichiers Markdown, les titres, listes, citations et tableaux sont aérés, et les blocs de code restent tels quels (ni découpés, ni lus à voix haute, ni envoyés à l'IA).
 - **Bouton « Envoyer vers Déclic »** : un favori à glisser dans la barre du navigateur. Sur la page d'un cours où l'on est connecté (plateforme de formation, ENT…) ou qui s'affiche en JavaScript, un clic envoie le texte affiché vers Déclic. Le texte passe dans l'adresse après le `#` : il n'est envoyé à aucun serveur. Si du texte est sélectionné, seule la sélection est envoyée.
-- **Onglet Adaptation** : le texte original aéré, une phrase par ligne. Chaque mot est cliquable et ouvre une bulle avec :
-  - le découpage en syllabes et la lecture à voix haute du mot ou de la phrase ;
-  - des synonymes adaptés à la phrase et le sens du mot ici (aide par IA) ;
-  - un bouton pour reformuler la phrase plus simplement (aide par IA).
+- **Onglet Adaptation** : le texte original aéré, une phrase par ligne. Chaque mot est cliquable et ouvre une grande bulle qui suit les réglages de lecture (police, espacements, fond), avec :
+  - le mot en grand, ses syllabes en couleur et un gros bouton pour l'écouter ;
+  - « Ça veut dire » : le sens du mot dans cette phrase (aide par IA) ;
+  - « Autres mots » : des synonymes adaptés à la phrase, à écouter d'un clic (aide par IA) ;
+  - « Dire plus simplement » (reformulation de la phrase, aide par IA), « Écouter la phrase » et « Lire d'ici ».
 - **Onglet Reformulation** : le texte entier reformulé paragraphe par paragraphe, avec les termes clés du cours gardés en gras, et un lien « Voir l'original » qui renvoie au même endroit dans l'onglet Adaptation. Les paragraphes ne sont reformulés qu'au moment où on les fait défiler, puis gardés en mémoire.
 - **Réglages** (barre d'icônes à gauche, qui s'ouvre au survol, au toucher, et peut être épinglée) : police (Atkinson Hyperlegible, Lexend, Andika, Verdana), taille, interligne, espacement des mots et des lettres, couleur de fond (crème, bleu, vert, sombre), syllabes en couleur, ligne de lecture (suit la souris ou les flèches ↑ ↓), lecture à voix haute du texte avec la vitesse réglable.
 - **Lecture à voix haute** : une barre flottante en bas de l'écran (« Écouter ») lit le texte phrase par phrase en surlignant la phrase lue, à partir de ce qui est affiché à l'écran. Pendant la lecture : pause et reprise (la phrase en cours est relue depuis son début), phrase précédente ou suivante, arrêt. Raccourcis : Espace pour pause et reprise, flèches ← → pour changer de phrase. Dans la bulle d'un mot, « Lire à partir d'ici » lance la lecture depuis cette phrase.
