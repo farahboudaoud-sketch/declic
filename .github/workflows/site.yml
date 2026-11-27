@@ -1,0 +1,50 @@
+name: Site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm test
+
+  mise-en-ligne:
+    needs: tests
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Adresse du serveur d'aide
+        env:
+          API_URL: ${{ vars.DECLIC_API_URL }}
+        run: |
+          if [ -n "$API_URL" ]; then
+            printf "export const API_URL = '%s';\n" "$API_URL" > site/js/config.js
+            echo "Aide par IA activée : $API_URL"
+          else
+            echo "Aide par IA désactivée (variable DECLIC_API_URL vide)."
+          fi
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      - id: deploiement
+        uses: actions/deploy-pages@v5

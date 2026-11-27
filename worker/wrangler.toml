@@ -1,0 +1,14 @@
+# Serveur d'aide de Déclic (Cloudflare Workers).
+# Secrets à définir (jamais dans ce fichier) : ANTHROPIC_API_KEY et CODES_ACCES.
+name = "declic-ia"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[vars]
+# Sites autorisés à appeler le serveur (séparés par des virgules).
+ORIGINES = "https://farahboudaoud-sketch.github.io"
+# Modèle utilisé : rapide et économique, largement suffisant pour des synonymes et des reformulations.
+MODELE = "claude-haiku-5-5"
+# Nombre maximum de demandes d'aide par code et par jour.
+LIMITE_JOUR = "500"

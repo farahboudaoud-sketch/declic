@@ -1,0 +1,40 @@
+name: Serveur d'aide
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - '.github/workflows/serveur-ia.yml'
+  workflow_dispatch:
+
+jobs:
+  deploiement:
+    runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Configuration absente
+        if: env.CF_TOKEN == ''
+        run: echo "::notice::Serveur d'aide non déployé. Ajoute les secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, ANTHROPIC_API_KEY et CODES_ACCES (voir le README)."
+      - uses: actions/checkout@v7
+        if: env.CF_TOKEN != ''
+      - uses: cloudflare/wrangler-action@v4
+        id: wrangler
+        if: env.CF_TOKEN != ''
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          secrets: |
+            ANTHROPIC_API_KEY
+            CODES_ACCES
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CODES_ACCES: ${{ secrets.CODES_ACCES }}
+      - name: Adresse du serveur
+        if: env.CF_TOKEN != ''
+        run: |
+          echo "### Serveur d'aide en ligne" >> "$GITHUB_STEP_SUMMARY"
+          echo "Adresse : ${{ steps.wrangler.outputs.deployment-url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Copie-la dans la variable DECLIC_API_URL du dépôt, puis relance le workflow « Site »." >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,9 @@
+{
+  "name": "declic",
+  "private": true,
+  "type": "module",
+  "description": "Déclic : lire ses cours plus facilement",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}
