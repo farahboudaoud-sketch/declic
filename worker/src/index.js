@@ -1,9 +1,9 @@
 // Serveur d'aide de Déclic (Cloudflare Worker).
-// Il garde la clé de l'API Claude secrète, vérifie le code d'accès et limite le nombre de demandes.
+// Il interroge l'IA de Cloudflare (Workers AI), vérifie le code d'accès et limite le nombre de demandes.
 import { extraireJson, nettoyerLignes, urlAutorisee, blocsPropres } from './outils.js';
 import { extraireHtml } from './html.js';
 
-const MODELE_PAR_DEFAUT = 'claude-haiku-5-5';
+const MODELE_PAR_DEFAUT = '@cf/mistralai/mistral-small-3.1-24b-instruct';
 const compteurs = new Map();
 
 class ErreurPublique extends Error {
@@ -52,29 +52,31 @@ function texteBorne(valeur, max, nom) {
   return t.length > max ? t.slice(0, max) : t;
 }
 
-async function claude(env, systeme, message, maxTokens) {
-  if (!env.ANTHROPIC_API_KEY) throw new ErreurPublique('Le serveur n’est pas encore configuré.', 503);
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: env.MODELE || MODELE_PAR_DEFAUT,
+// Appel au modèle de Workers AI (aucune clé à gérer : l'IA est liée au compte Cloudflare).
+async function genererTexte(env, systeme, message, maxTokens) {
+  if (!env.AI) throw new ErreurPublique('Le serveur n’est pas encore configuré.', 503);
+  let res;
+  try {
+    res = await env.AI.run(env.MODELE || MODELE_PAR_DEFAUT, {
+      messages: [
+        { role: 'system', content: systeme },
+        { role: 'user', content: message },
+      ],
       max_tokens: maxTokens,
-      system: systeme,
-      messages: [{ role: 'user', content: message }],
-    }),
-  });
-  if (!r.ok) {
-    console.error('API Claude', r.status, await r.text());
-    if (r.status === 429 || r.status === 529) throw new ErreurPublique('Le service est très demandé : réessaie dans une minute.', 503);
+      temperature: 0.3,
+    });
+  } catch (e) {
+    const texte = String(e?.message || e);
+    console.error('Workers AI', texte);
+    if (/4006|neurons|allocation/i.test(texte)) {
+      throw new ErreurPublique('L’aide a atteint sa limite pour aujourd’hui. Elle revient demain matin.', 429);
+    }
+    if (/429|capacity|rate/i.test(texte)) throw new ErreurPublique('Le service est très demandé : réessaie dans une minute.', 503);
     throw new ErreurPublique('Le service d’aide ne répond pas pour le moment.', 502);
   }
-  const donnees = await r.json();
-  return (donnees.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('').trim();
+  const texte = typeof res === 'string' ? res
+    : res?.response ?? res?.choices?.[0]?.message?.content ?? res?.result?.response ?? '';
+  return (typeof texte === 'string' ? texte : JSON.stringify(texte)).trim();
 }
 
 // ---------- Les trois aides ----------
@@ -90,7 +92,7 @@ Règles :
 async function aideMot(env, corps) {
   const mot = texteBorne(corps.mot, 60, 'le mot');
   const phrase = texteBorne(corps.phrase, 1200, 'la phrase');
-  const reponse = await claude(env, SYSTEME_MOT, `Mot : « ${mot} »\nPhrase : « ${phrase} »`, 300);
+  const reponse = await genererTexte(env, SYSTEME_MOT, `Mot : « ${mot} »\nPhrase : « ${phrase} »`, 300);
   const res = extraireJson(reponse) || {};
   return {
     synonymes: Array.isArray(res.synonymes) ? res.synonymes.filter((s) => typeof s === 'string').slice(0, 4) : [],
@@ -109,7 +111,7 @@ async function reformulerPhrase(env, corps) {
   const phrase = texteBorne(corps.phrase, 1200, 'la phrase');
   const contexte = typeof corps.contexte === 'string' ? corps.contexte.slice(0, 3000) : '';
   const message = `${contexte ? `Paragraphe où se trouve la phrase (pour le contexte) :\n${contexte}\n\n` : ''}Phrase à reformuler :\n${phrase}`;
-  return { reformulation: await claude(env, SYSTEME_PHRASE, message, 400) };
+  return { reformulation: await genererTexte(env, SYSTEME_PHRASE, message, 400) };
 }
 
 const SYSTEME_PARAGRAPHE = `Tu adaptes un paragraphe de cours pour des élèves dyslexiques.
@@ -124,7 +126,7 @@ async function reformulerParagraphe(env, corps) {
   const texte = texteBorne(corps.texte, 6000, 'le paragraphe');
   const titre = typeof corps.titre === 'string' ? corps.titre.slice(0, 200) : '';
   const message = `${titre ? `Titre de la partie : ${titre}\n\n` : ''}Paragraphe :\n${texte}`;
-  return { lignes: nettoyerLignes(await claude(env, SYSTEME_PARAGRAPHE, message, 1500)) };
+  return { lignes: nettoyerLignes(await genererTexte(env, SYSTEME_PARAGRAPHE, message, 1500)) };
 }
 
 // ---------- Récupération du texte d'une page web ----------

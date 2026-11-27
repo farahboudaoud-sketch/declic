@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import serveur from '../worker/src/index.js';
 import { extraireJson, nettoyerLignes, decoderEntites, urlAutorisee } from '../worker/src/outils.js';
 
-const ENV = { CODES_ACCES: 'SVT5, MATHS', ANTHROPIC_API_KEY: 'cle-test', ORIGINES: 'https://farahboudaoud-sketch.github.io', LIMITE_JOUR: '50' };
+const ENV = { CODES_ACCES: 'SVT5, MATHS', ORIGINES: 'https://farahboudaoud-sketch.github.io', LIMITE_JOUR: '50' };
 
 function requete(chemin, corps, code = 'SVT5') {
   return new Request(`https://declic-ia.test${chemin}`, {
@@ -13,11 +13,14 @@ function requete(chemin, corps, code = 'SVT5') {
   });
 }
 
-function simulerClaude(texte) {
+// Simule l'IA de Cloudflare (env.AI) et renvoie la liste des appels reçus.
+function simulerIA(texte, format = 'response') {
   const appels = [];
-  globalThis.fetch = async (url, options) => {
-    appels.push({ url, corps: JSON.parse(options.body) });
-    return new Response(JSON.stringify({ content: [{ type: 'text', text: texte }] }), { status: 200 });
+  ENV.AI = {
+    async run(modele, entree) {
+      appels.push({ modele, entree });
+      return format === 'choices' ? { choices: [{ message: { content: texte } }] } : { response: texte };
+    },
   };
   return appels;
 }
@@ -56,32 +59,39 @@ test('code valide et CORS', async () => {
 });
 
 test('aide sur un mot', async () => {
-  const appels = simulerClaude('{"synonymes": ["produisent", "créent", "font", "fabriquent", "trop"], "sens": "ils font eux-mêmes."}');
+  const appels = simulerIA('Voici : {"synonymes": ["produisent", "créent", "font", "fabriquent", "trop"], "sens": "ils font eux-mêmes."}');
   const r = await serveur.fetch(requete('/mot', { mot: 'fabriquent', phrase: 'Les plantes fabriquent leur nourriture.' }), ENV);
   assert.equal(r.status, 200);
   const d = await r.json();
   assert.deepEqual(d.synonymes, ['produisent', 'créent', 'font', 'fabriquent']);
   assert.equal(d.sens, 'ils font eux-mêmes.');
-  assert.equal(appels[0].url, 'https://api.anthropic.com/v1/messages');
-  assert.equal(appels[0].corps.model, 'claude-haiku-5-5');
-  assert.match(appels[0].corps.messages[0].content, /fabriquent/);
+  assert.equal(appels[0].modele, '@cf/mistralai/mistral-small-3.1-24b-instruct');
+  assert.equal(appels[0].entree.messages[0].role, 'system');
+  assert.match(appels[0].entree.messages[1].content, /fabriquent/);
 });
 
 test('reformulation d’un paragraphe en lignes', async () => {
-  simulerClaude('Les plantes font leur nourriture.\nOn appelle ça la **photosynthèse**.');
+  simulerIA('Les plantes font leur nourriture.\nOn appelle ça la **photosynthèse**.', 'choices');
   const r = await serveur.fetch(requete('/paragraphe', { texte: 'La photosynthèse est le processus...', titre: 'La photosynthèse' }), ENV);
   assert.deepEqual((await r.json()).lignes, ['Les plantes font leur nourriture.', 'On appelle ça la **photosynthèse**.']);
 });
 
-test('erreur de l’API Claude : message lisible', async () => {
-  globalThis.fetch = async () => new Response('surcharge', { status: 529 });
+test('quota gratuit épuisé : message lisible', async () => {
+  ENV.AI = { async run() { throw new Error('4006: you have used up your daily free allocation of 10,000 neurons'); } };
   const r = await serveur.fetch(requete('/phrase', { phrase: 'Une phrase.' }), ENV);
-  assert.equal(r.status, 503);
-  assert.match((await r.json()).erreur, /réessaie/);
+  assert.equal(r.status, 429);
+  assert.match((await r.json()).erreur, /limite pour aujourd’hui/);
+});
+
+test('IA indisponible : message lisible', async () => {
+  ENV.AI = { async run() { throw new Error('InferenceUpstreamError: internal'); } };
+  const r = await serveur.fetch(requete('/phrase', { phrase: 'Une phrase.' }), ENV);
+  assert.equal(r.status, 502);
+  assert.match((await r.json()).erreur, /ne répond pas/);
 });
 
 test('limite par jour', async () => {
-  simulerClaude('ok');
+  simulerIA('ok');
   const env = { ...ENV, CODES_ACCES: 'QUOTA', LIMITE_JOUR: '2' };
   const statuts = [];
   for (let i = 0; i < 3; i++) statuts.push((await serveur.fetch(requete('/phrase', { phrase: 'Une phrase.' }, 'QUOTA'), env)).status);

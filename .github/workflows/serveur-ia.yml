@@ -16,9 +16,11 @@ jobs:
     steps:
       - name: Configuration absente
         if: env.CF_TOKEN == ''
-        run: echo "::notice::Serveur d'aide non déployé. Ajoute les secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, ANTHROPIC_API_KEY et CODES_ACCES (voir le README)."
+        run: echo "::notice::Serveur d'aide non déployé. Ajoute les secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID et CODES_ACCES (voir le README)."
+
       - uses: actions/checkout@v7
         if: env.CF_TOKEN != ''
+
       - uses: cloudflare/wrangler-action@v4
         id: wrangler
         if: env.CF_TOKEN != ''
@@ -27,14 +29,36 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
           secrets: |
-            ANTHROPIC_API_KEY
             CODES_ACCES
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CODES_ACCES: ${{ secrets.CODES_ACCES }}
-      - name: Adresse du serveur
+
+      - name: Vérification du serveur en ligne
         if: env.CF_TOKEN != ''
+        env:
+          URL: ${{ steps.wrangler.outputs.deployment-url }}
+          CODES: ${{ secrets.CODES_ACCES }}
         run: |
-          echo "### Serveur d'aide en ligne" >> "$GITHUB_STEP_SUMMARY"
-          echo "Adresse : ${{ steps.wrangler.outputs.deployment-url }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Copie-la dans la variable DECLIC_API_URL du dépôt, puis relance le workflow « Site »." >> "$GITHUB_STEP_SUMMARY"
+          CODE="$(echo "${CODES%%,*}" | xargs)"
+          ORIGINE="https://farahboudaoud-sketch.github.io"
+          sleep 10
+          appel() {
+            curl -sS -X POST "$URL$1" -H "Content-Type: application/json" -H "X-Code-Acces: $CODE" -H "Origin: $ORIGINE" -d "$2" -w "\n(statut HTTP %{http_code})\n"
+          }
+          {
+            echo "### Serveur d'aide en ligne"
+            echo "Adresse : $URL"
+            echo
+            echo '```'
+            echo "== Code d'accès =="
+            appel /verifier '{}'
+            echo "== Aide sur un mot =="
+            appel /mot '{"mot":"fabriquent","phrase":"Les plantes vertes fabriquent leur propre nourriture grâce à la lumière."}'
+            echo "== Reformulation d'une phrase =="
+            appel /phrase '{"phrase":"La photosynthèse est le processus par lequel les plantes vertes fabriquent leur propre nourriture à partir de la lumière, de l eau et du dioxyde de carbone."}'
+            echo "== Reformulation d'un paragraphe =="
+            appel /paragraphe '{"titre":"La photosynthèse","texte":"La photosynthèse est le processus par lequel les plantes vertes fabriquent leur propre nourriture. Elle a lieu principalement dans les feuilles, grâce à un pigment vert appelé chlorophylle. Pour cela, la plante utilise l énergie lumineuse du soleil."}'
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "== En-têtes CORS =="
+          curl -sS -o /dev/null -D - -X OPTIONS "$URL/mot" -H "Origin: $ORIGINE" -H "Access-Control-Request-Method: POST" | grep -i "access-control" || true
