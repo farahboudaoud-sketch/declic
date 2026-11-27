@@ -41,7 +41,7 @@ Mise en place (déjà faite) :
    - `CLOUDFLARE_ACCOUNT_ID` : l'identifiant du compte (visible dans l'adresse du tableau de bord) ;
    - `CODES_ACCES` : les codes à donner aux élèves, séparés par des virgules (par exemple `SOLEIL-5A,LUNE-4B`). Un code par classe permet d'en retirer un sans toucher aux autres.
 
-Le workflow **Serveur d'aide** déploie le serveur à chaque modification du dossier `worker/`, puis le teste en ligne avec le premier code d'accès (résultat visible dans le résumé du workflow). L'adresse du serveur est inscrite dans `site/js/config.js`.
+Le serveur est en ligne à l’adresse `https://declic-ia.farah-boudaoud.workers.dev`. Le workflow **Serveur d’aide** déploie le serveur à chaque modification du dossier `worker/`, puis le teste en ligne avec le premier code d'accès (résultat visible dans le résumé du workflow). L'adresse du serveur est inscrite dans `site/js/config.js`.
 
 Pour changer les codes d'accès : modifie le secret `CODES_ACCES`, puis relance le workflow **Serveur d'aide** (*Actions → Serveur d'aide → Run workflow*).
 

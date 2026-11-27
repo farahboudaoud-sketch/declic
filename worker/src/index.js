@@ -81,13 +81,15 @@ async function genererTexte(env, systeme, message, maxTokens) {
 
 // ---------- Les trois aides ----------
 
-const SYSTEME_MOT = `Tu aides des élèves dyslexiques (collège, lycée ou études) à comprendre un mot d'un cours.
+const SYSTEME_MOT = `Tu aides des élèves dyslexiques (collège, lycée ou études) à comprendre un mot difficile dans un cours.
 Réponds uniquement avec du JSON valide, sans aucun texte autour, au format :
 {"synonymes": ["...", "..."], "sens": "..."}
 Règles :
-- "synonymes" : de 0 à 4 synonymes simples et courants qui conviennent DANS CETTE PHRASE, accordés comme le mot. Liste vide si c'est un petit mot (le, de, et…) ou un terme technique sans vrai synonyme.
-- "sens" : ce que veut dire le mot dans cette phrase précise, en une phrase très simple de 15 mots maximum.
-- N'invente rien. Si tu n'es pas sûr, reste prudent et général.`;
+- "synonymes" : de 0 à 4 synonymes simples et courants qui pourraient remplacer le mot DANS CETTE PHRASE, accordés comme lui. Liste vide si c'est un petit mot (le, de, et…) ou un terme technique sans vrai synonyme.
+- "sens" : explique le MOT lui-même (pas toute la phrase), tel qu'il est utilisé ici, avec des mots faciles, en 15 mots maximum.
+- N'invente rien.
+Exemple : pour le mot « absorbe » dans « La plante absorbe l'eau par ses racines. », réponds :
+{"synonymes": ["prend", "aspire", "boit"], "sens": "faire entrer quelque chose en soi, comme une éponge qui prend l'eau"}`;
 
 async function aideMot(env, corps) {
   const mot = texteBorne(corps.mot, 60, 'le mot');
@@ -100,9 +102,9 @@ async function aideMot(env, corps) {
   };
 }
 
-const SYSTEME_PHRASE = `Tu reformules une phrase de cours pour un élève dyslexique.
+const SYSTEME_PHRASE = `Tu reformules une phrase de cours pour un élève dyslexique, pour qu'il la comprenne du premier coup.
 - Garde exactement le même sens et toutes les informations, n'en ajoute aucune.
-- Utilise des mots simples et des phrases courtes (une idée par phrase).
+- Utilise des mots simples et des phrases courtes mais naturelles (8 à 15 mots), reliées entre elles comme on parle, pas en style télégraphique.
 - Garde les termes techniques du cours ; tu peux les expliquer en quelques mots.
 - Garde les nombres, formules, dates et noms propres exacts.
 Réponds uniquement avec la reformulation, sans introduction ni guillemets.`;
@@ -116,7 +118,7 @@ async function reformulerPhrase(env, corps) {
 
 const SYSTEME_PARAGRAPHE = `Tu adaptes un paragraphe de cours pour des élèves dyslexiques.
 - Garde tout le sens et toutes les informations importantes ; n'en ajoute aucune.
-- Fais des phrases courtes et simples, une idée par phrase, avec des mots courants.
+- Fais des phrases courtes mais naturelles (8 à 15 mots), une idée par phrase, avec des mots courants. Garde les liens logiques (parce que, donc, pour cela…), pas de style télégraphique.
 - Garde les termes clés du cours tels quels et entoure-les de ** (exemple : **photosynthèse**). Pas plus de trois termes clés par paragraphe.
 - Garde les nombres, formules, dates et noms propres exacts.
 - Écris une phrase par ligne, sans puces, sans numéros, sans titre.
