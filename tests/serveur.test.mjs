@@ -102,3 +102,10 @@ test('champ manquant', async () => {
   const r = await serveur.fetch(requete('/mot', { mot: '' }), ENV);
   assert.equal(r.status, 400);
 });
+
+test('lien vers un fichier Markdown : renvoyé tel quel au site', async () => {
+  globalThis.fetch = async () => new Response('# Cours\n\nDu **texte**.', { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  const r = await serveur.fetch(requete('/lien', { url: 'https://raw.githubusercontent.com/exemple/cours/main/regression.md' }), ENV);
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { titre: 'regression.md', markdown: '# Cours\n\nDu **texte**.' });
+});

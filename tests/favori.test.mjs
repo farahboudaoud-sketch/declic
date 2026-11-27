@@ -11,9 +11,9 @@ test('le favori est un lien javascript qui vise l’adresse de Déclic', () => {
 });
 
 test('texte reçu : blocs nettoyés', () => {
-  const d = { type: 'declic-texte', titre: 'Cours', blocs: [{ type: 'titre', texte: 'Titre' }, { type: 'bizarre', texte: 'Para' }, { texte: 3 }], texte: '' };
+  const d = { type: 'declic-texte', titre: 'Cours', blocs: [{ type: 'titre', texte: 'Titre' }, { type: 'bizarre', texte: 'Para' }, { type: 'code', texte: 'x = 1' }, { texte: 3 }], texte: '' };
   const r = lireTexteRecu(`#recevoir=${encodeURIComponent(JSON.stringify(d))}`);
-  assert.deepEqual(r.blocs, [{ type: 'titre', texte: 'Titre' }, { type: 'para', texte: 'Para' }]);
+  assert.deepEqual(r.blocs, [{ type: 'titre', texte: 'Titre' }, { type: 'para', texte: 'Para' }, { type: 'code', texte: 'x = 1' }]);
   assert.equal(r.titre, 'Cours');
 });
 

@@ -18,10 +18,11 @@ function envoyerVersDeclic(adresseDeclic) {
       if (el.closest(EXCLUS)) return;
       const parent = el.parentElement && el.parentElement.closest(SELECTEUR);
       if (parent && racine.contains(parent)) return;
-      const t = propre(el.innerText);
-      if (t.length < 2) return;
-      const titre = /^H\d$/.test(el.tagName);
-      blocs.push({ type: titre ? 'titre' : 'para', texte: el.tagName === 'LI' ? `• ${t}` : t });
+      const code = el.tagName === 'PRE';
+      const t = code ? String(el.innerText || '').replace(/\s+$/, '') : propre(el.innerText);
+      if (t.trim().length < 2) return;
+      const type = /^H\d$/.test(el.tagName) ? 'titre' : code ? 'code' : 'para';
+      blocs.push({ type, texte: el.tagName === 'LI' ? `• ${t}` : t });
     });
     texte = racine.innerText || '';
   }
@@ -58,7 +59,7 @@ export function lireTexteRecu(fragment) {
     ? d.blocs
       .filter((b) => b && typeof b.texte === 'string')
       .slice(0, 3000)
-      .map((b) => ({ type: b.type === 'titre' ? 'titre' : 'para', texte: b.texte.slice(0, 20000) }))
+      .map((b) => ({ type: ['titre', 'code'].includes(b.type) ? b.type : 'para', texte: b.texte.slice(0, 20000) }))
     : [];
   return {
     titre: typeof d.titre === 'string' ? d.titre.slice(0, 200) : '',

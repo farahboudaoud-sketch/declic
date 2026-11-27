@@ -16,6 +16,11 @@ test('ne coupe pas après une abréviation ou une initiale', () => {
   );
 });
 
+test('ne coupe pas après un numéro de liste', () => {
+  assert.deepEqual(decouperPhrases('1. Charger les données. Puis les nettoyer.'), ['1. Charger les données.', 'Puis les nettoyer.']);
+  assert.deepEqual(decouperPhrases('Il y en a 2. Ensuite on compte.'), ['Il y en a 2.', 'Ensuite on compte.']);
+});
+
 test('ne coupe pas dans un nombre décimal', () => {
   assert.deepEqual(decouperPhrases('Pi vaut 3.14 environ. Voilà.'), ['Pi vaut 3.14 environ.', 'Voilà.']);
 });

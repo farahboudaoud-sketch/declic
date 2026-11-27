@@ -153,6 +153,11 @@ async function chargerLien(corps, cors) {
     if (taille > 20e6) throw new ErreurPublique('Ce PDF est trop lourd.', 413);
     return new Response(r.body, { status: 200, headers: { ...cors, 'Content-Type': 'application/pdf' } });
   }
+  // Fichier Markdown (par exemple un lien « raw » GitHub) : le site s'occupe de la mise en forme.
+  if (!type.includes('html') && (type.includes('markdown') || /\.(md|markdown)$/i.test(url.pathname))) {
+    const nom = decodeURIComponent(url.pathname.split('/').pop() || url.hostname);
+    return json({ titre: nom, markdown: (await r.text()).slice(0, 500000) }, 200, cors);
+  }
   if (!type.includes('html') && !type.includes('text/plain')) throw new ErreurPublique('Ce lien ne mène ni à une page de texte ni à un PDF.');
   if (type.includes('text/plain')) {
     const texte = (await r.text()).slice(0, 200000);

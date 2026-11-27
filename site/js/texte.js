@@ -32,6 +32,8 @@ export function decouperPhrases(texte) {
     const dernierMot = (avant.match(/([\p{L}°-]+)$/u) || [])[1] || '';
     const ponct = m[1];
     if (ponct === '.') {
+      // Numéro de liste en début de paragraphe (« 1. Charger les données »).
+      if (/^\s*[([]?\d{1,3}$/u.test(avant)) continue;
       // Initiale (« J. Dupont ») ou abréviation (« M. », « ex. »).
       if (/^\p{Lu}$/u.test(dernierMot) || ABREVIATIONS.has(dernierMot.toLowerCase())) continue;
     }
@@ -233,4 +235,122 @@ export function empreinte(texte) {
     h = Math.imul(h, 0x01000193);
   }
   return (h >>> 0).toString(36);
+}
+
+// ---------- Markdown ----------
+
+// Retire la mise en forme Markdown d'une ligne : on garde le texte lisible.
+export function nettoyerMarkdownEnLigne(t) {
+  return t
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1')
+    .replace(/<(https?:\/\/[^>\s]+)>/g, '$1')
+    .replace(/\[\^[^\]]+\]/g, '')
+    .replace(/<\/?[a-z][^>]*>/gi, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/(\*\*|__)(?=\S)(.+?)(?<=\S)\1/g, '$2')
+    .replace(/(^|[\s(«"'])([*_])(?=\S)(.+?)(?<=\S)\2(?=$|[\s).,;:!?»"'])/gu, '$1$3')
+    .replace(/~~(.+?)~~/g, '$1')
+    .replace(/\\([\\`*_{}[\]()#+\-.!|>~])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const LIGNE_TABLEAU_SEPARATEUR = /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$/;
+
+// Transforme un fichier Markdown en blocs { type: 'titre' | 'para' | 'code', texte }.
+export function paragraphesDepuisMarkdown(brut) {
+  let lignes = brut.replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '').split('\n');
+  // En-tête YAML (« front matter ») : on l'ignore.
+  if (lignes[0]?.trim() === '---') {
+    const fin = lignes.findIndex((l, k) => k > 0 && /^(---|\.\.\.)\s*$/.test(l));
+    if (fin > 0) lignes = lignes.slice(fin + 1);
+  }
+  const res = [];
+  let para = [];
+  const finirPara = () => {
+    if (!para.length) return;
+    const texte = nettoyerMarkdownEnLigne(para.join(' '));
+    if (texte) res.push({ type: 'para', texte });
+    para = [];
+  };
+
+  let i = 0;
+  while (i < lignes.length) {
+    const ligne = lignes[i];
+    const t = ligne.trim();
+
+    // Bloc de code entre ``` ou ~~~ : gardé tel quel.
+    const cloture = t.match(/^(`{3,}|~{3,})/);
+    if (cloture) {
+      finirPara();
+      const code = [];
+      i++;
+      while (i < lignes.length && !lignes[i].trim().startsWith(cloture[1])) code.push(lignes[i++]);
+      i++;
+      const texte = code.join('\n').replace(/\s+$/, '');
+      if (texte.trim()) res.push({ type: 'code', texte });
+      continue;
+    }
+    if (!t) { finirPara(); i++; continue; }
+
+    // Titres « # Titre ».
+    const titre = t.match(/^#{1,6}\s+(.*?)\s*#*\s*$/);
+    if (titre) {
+      finirPara();
+      const texte = nettoyerMarkdownEnLigne(titre[1]);
+      if (texte) res.push({ type: 'titre', texte });
+      i++;
+      continue;
+    }
+    // Titre souligné (ligne suivie de === ou ---).
+    if (para.length && /^(=+|-+)$/.test(t)) {
+      const texte = nettoyerMarkdownEnLigne(para.join(' '));
+      para = [];
+      if (texte) res.push({ type: 'titre', texte });
+      i++;
+      continue;
+    }
+    // Séparateur horizontal, définitions de liens : rien à lire.
+    if (/^([-*_])(\s*\1){2,}$/.test(t) || /^\[[^\]]+\]:\s*\S+/.test(t)) { finirPara(); i++; continue; }
+
+    // Tableau : une ligne par rangée, cellules séparées par des tirets.
+    if (t.includes('|') && (/^\|.*\|$/.test(t) || LIGNE_TABLEAU_SEPARATEUR.test((lignes[i + 1] || '').trim()))) {
+      finirPara();
+      while (i < lignes.length && lignes[i].includes('|') && lignes[i].trim()) {
+        const rangee = lignes[i].trim();
+        if (!LIGNE_TABLEAU_SEPARATEUR.test(rangee)) {
+          const cellules = rangee.replace(/^\||\|$/g, '').split('|').map(nettoyerMarkdownEnLigne).filter(Boolean);
+          if (cellules.length) res.push({ type: 'para', texte: cellules.join(' – ') });
+        }
+        i++;
+      }
+      continue;
+    }
+
+    // Élément de liste (puces, numéros, cases à cocher).
+    const puce = ligne.match(/^\s*([-*+]|\d{1,3}[.)])\s+(.*)$/);
+    if (puce) {
+      finirPara();
+      let contenu = puce[2].replace(/^\[ \]\s+/, '☐ ').replace(/^\[[xX]\]\s+/, '☑ ');
+      const marque = /\d/.test(puce[1]) ? puce[1].replace(')', '.') : '•';
+      para = [`${marque} ${contenu}`];
+      i++;
+      continue;
+    }
+
+    // Citation.
+    if (t.startsWith('>')) {
+      const texte = t.replace(/^(>\s?)+/, '');
+      if (texte) para.push(texte); else finirPara();
+      i++;
+      continue;
+    }
+
+    para.push(t);
+    i++;
+  }
+  finirPara();
+  return res;
 }

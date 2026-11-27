@@ -1,4 +1,4 @@
-import { decouperPhrases, decouperMots, paragraphesDepuisTexte, empreinte } from './texte.js';
+import { decouperPhrases, decouperMots, paragraphesDepuisTexte, paragraphesDepuisMarkdown, empreinte } from './texte.js';
 import { syllabes } from './syllabes.js';
 import * as stockage from './stockage.js';
 import * as ia from './ia.js';
@@ -33,10 +33,14 @@ function htmlLigneReformulee(ligne) {
     .join('');
 }
 
+// Bloc de code : affiché tel quel, ni découpé, ni lu à voix haute, ni envoyé à l'IA.
+const htmlCode = (b, i) => `<pre class="code" data-p="${i}"><code>${echapper(b.texte)}</code></pre>`;
+
 function rendreAdaptation() {
   const p = $('#panneau-adaptation');
   p.innerHTML = doc.paragraphes.map((b, i) => {
     if (b.type === 'titre') return `<h2 class="titre phrase" data-p="${i}">${htmlMots(b.texte)}</h2>`;
+    if (b.type === 'code') return htmlCode(b, i);
     const phrases = decouperPhrases(b.texte).map((ph) => `<span class="phrase">${htmlMots(ph)}</span>`).join('');
     const puce = PUCE.test(b.texte) ? ' puce' : '';
     return `<div class="para${puce}" data-p="${i}">${phrases}</div>`;
@@ -102,21 +106,39 @@ async function ouvrirPdf(donnees, nomFichier) {
       messageAccueil('Ce PDF semble être une image scannée : Déclic ne sait pas encore lire ce type de document. Essaie avec un PDF où l’on peut sélectionner le texte.', true);
       return;
     }
-    const nom = (nomFichier || '').replace(/\.pdf$/i, '').replace(/[_]+/g, ' ').trim();
-    ouvrirDocument(creerDocument(nom || res.titre, res.paragraphes));
+    ouvrirDocument(creerDocument(nomSansExtension(nomFichier) || res.titre, res.paragraphes));
   } catch (e) {
     console.error(e);
     messageAccueil('Impossible de lire ce PDF. Il est peut-être protégé ou abîmé.', true);
   }
 }
 
-async function ouvrirFichier(fichier) {
-  if (!fichier) return;
-  if (!/pdf$/i.test(fichier.type) && !/\.pdf$/i.test(fichier.name)) {
-    messageAccueil('Choisis un fichier PDF.', true);
+const nomSansExtension = (nom) => (nom || '').replace(/\.[a-z0-9]+$/i, '').replace(/[_]+/g, ' ').trim();
+
+function ouvrirMarkdown(texte, nomFichier) {
+  const paragraphes = paragraphesDepuisMarkdown(texte);
+  if (!paragraphes.length) {
+    messageAccueil('Ce fichier ne contient pas de texte à lire.', true);
     return;
   }
-  ouvrirPdf(await fichier.arrayBuffer(), fichier.name);
+  const titre = paragraphes.find((p) => p.type === 'titre')?.texte || nomSansExtension(nomFichier);
+  ouvrirDocument(creerDocument(titre, paragraphes));
+}
+
+async function ouvrirFichier(fichier) {
+  if (!fichier) return;
+  const nom = fichier.name || '';
+  if (/pdf$/i.test(fichier.type) || /\.pdf$/i.test(nom)) {
+    ouvrirPdf(await fichier.arrayBuffer(), nom);
+  } else if (/markdown/i.test(fichier.type) || /\.(md|markdown|mdown|mkd)$/i.test(nom)) {
+    ouvrirMarkdown(await fichier.text(), nom);
+  } else if (/^text\/plain/i.test(fichier.type) || /\.txt$/i.test(nom)) {
+    const paragraphes = paragraphesDepuisTexte(await fichier.text());
+    if (paragraphes.length) ouvrirDocument(creerDocument(nomSansExtension(nom), paragraphes));
+    else messageAccueil('Ce fichier ne contient pas de texte à lire.', true);
+  } else {
+    messageAccueil('Choisis un fichier PDF ou Markdown (.md).', true);
+  }
 }
 
 async function ouvrirLien(url) {
@@ -128,6 +150,10 @@ async function ouvrirLien(url) {
   messageAccueil('Récupération de la page…');
   try {
     const res = await ia.chargerLien(url);
+    if (typeof res.markdown === 'string') {
+      ouvrirMarkdown(res.markdown, res.titre);
+      return;
+    }
     if (res.pdf) {
       const nom = decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
       await ouvrirPdf(res.pdf, nom);
@@ -209,6 +235,7 @@ function rendreReformulation() {
   let numero = 0;
   p.innerHTML = doc.paragraphes.map((b, i) => {
     if (b.type === 'titre') return `<h2 class="titre phrase" data-p="${i}">${htmlMots(b.texte)}</h2>`;
+    if (b.type === 'code') return htmlCode(b, i);
     // Les lignes courtes (puces, phrases brèves) restent telles quelles, sans appel à l'IA.
     if (b.texte.length < 90) {
       return `<div class="para${PUCE.test(b.texte) ? ' puce' : ''}" data-p="${i}">${htmlLignes([b.texte])}</div>`;

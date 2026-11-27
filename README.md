@@ -6,7 +6,7 @@ Adresse du site : **https://farahboudaoud-sketch.github.io/declic/**
 
 ## Ce que fait le site
 
-- **Import** : un PDF (lu directement dans le navigateur, il n'est envoyé nulle part), un lien vers une page web ou un PDF en ligne, ou un texte collé.
+- **Import** : un PDF ou un fichier Markdown (`.md`, ou `.txt`), lus directement dans le navigateur et envoyés nulle part ; un lien vers une page web, un PDF ou un fichier Markdown en ligne ; ou un texte collé. Dans les fichiers Markdown, les titres, listes, citations et tableaux sont aérés, et les blocs de code restent tels quels (ni découpés, ni lus à voix haute, ni envoyés à l'IA).
 - **Bouton « Envoyer vers Déclic »** : un favori à glisser dans la barre du navigateur. Sur la page d'un cours où l'on est connecté (plateforme de formation, ENT…) ou qui s'affiche en JavaScript, un clic envoie le texte affiché vers Déclic. Le texte passe dans l'adresse après le `#` : il n'est envoyé à aucun serveur. Si du texte est sélectionné, seule la sélection est envoyée.
 - **Onglet Adaptation** : le texte original aéré, une phrase par ligne. Chaque mot est cliquable et ouvre une bulle avec :
   - le découpage en syllabes et la lecture à voix haute du mot ou de la phrase ;

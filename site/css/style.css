@@ -184,6 +184,7 @@ body.en-lecture[data-fond="sombre"] .onglets button[aria-selected="false"] { col
 .phrase { display: block; padding: 0 0.35em; margin: 0 -0.35em; border-radius: 6px; transition: background .12s; }
 .titre { font-size: 1.25em; font-weight: 700; line-height: 1.5; color: var(--titre); margin: 1.1em 0 0.5em; }
 .titre:first-child { margin-top: 0; }
+.titre.phrase { margin-left: -0.35em; margin-right: -0.35em; }
 body.ligne-on .phrase.active, .phrase.lue { background: var(--ligne); }
 .mot { cursor: pointer; border-radius: 4px; }
 .mot:hover { background: var(--mot-survol); }
@@ -192,6 +193,13 @@ body.syllabes-on .syl:nth-child(even) { color: var(--syl-b); }
 .mot.actif .syl { color: inherit !important; }
 .surbrillance { animation: eclair 1.6s ease-out; }
 @keyframes eclair { from { background: var(--mot-actif); } to { background: transparent; } }
+.code {
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+  font-size: 0.8em; line-height: 1.55; letter-spacing: 0; word-spacing: 0;
+  background: rgba(12, 68, 124, 0.07); border-radius: 8px;
+  padding: 0.8em 1em; margin: 0 0 1.1em; overflow-x: auto; white-space: pre;
+}
+body[data-fond="sombre"] .code { background: rgba(255, 255, 255, 0.07); }
 .vide { font-family: var(--ui); font-size: 17px; line-height: 1.6; color: var(--texte-doux); text-align: center; padding: 1em 0; }
 .vide .btn { margin-top: 12px; }
 
